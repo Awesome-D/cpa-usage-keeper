@@ -12,6 +12,7 @@ const KEY_VIEWER_PAGE_LABEL_KEYS: Record<KeyViewerPage, string> = {
   overview: 'usage_stats.tab_overview',
   realtime: 'usage_stats.tab_realtime',
   analysis: 'usage_stats.tab_analysis',
+  events: 'usage_stats.tab_requests',
   ranking: 'usage_stats.tab_ranking',
 };
 
@@ -72,7 +73,9 @@ export function KeyViewerShell({
 
             <DashboardToolbar
               activeId={activePage}
-              items={(Object.keys(KEY_VIEWER_PAGE_PATHS) as KeyViewerPage[]).map((page) => ({ id: page, label: t(KEY_VIEWER_PAGE_LABEL_KEYS[page]), href: appPath(KEY_VIEWER_PAGE_PATHS[page]) }))}
+              items={(Object.keys(KEY_VIEWER_PAGE_PATHS) as KeyViewerPage[])
+                .filter((page) => page !== 'events' || apiKey?.permissions?.includes('request_events'))
+                .map((page) => ({ id: page, label: t(KEY_VIEWER_PAGE_LABEL_KEYS[page]), href: appPath(KEY_VIEWER_PAGE_PATHS[page]) }))}
               onNavigate={(page) => onNavigate(KEY_VIEWER_PAGE_PATHS[page])}
               filters={filters}
               onRefresh={onRefresh}
