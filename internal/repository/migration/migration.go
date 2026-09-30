@@ -101,6 +101,8 @@ const (
 	migrationNormalizeUsageEventParentSessionNull   = "20260922_normalize_usage_event_parent_session_null"
 	// migrationLimitLatencySamplePoints 缩小已保存散点，事务前必须备份旧 BLOB。
 	migrationLimitLatencySamplePoints = "20260925_limit_latency_sample_points"
+	// migrationAddCPAAPIKeyViewerAccess adds opt-in per-key viewer capabilities without expanding existing access.
+	migrationAddCPAAPIKeyViewerAccess = "20260930_add_cpa_api_key_viewer_access"
 )
 
 type schemaMigration struct {
@@ -252,6 +254,7 @@ func orderedMigrations() []databaseMigration {
 		{version: migrationAddUsageEventStreamStatusCode, run: addUsageEventStreamStatusCodeMigration},
 		{version: migrationNormalizeUsageEventParentSessionNull, run: normalizeUsageEventParentSessionNullMigration},
 		{version: migrationLimitLatencySamplePoints, run: limitLatencySamplePointsMigration, destructive: true},
+		{version: migrationAddCPAAPIKeyViewerAccess, run: addCPAAPIKeyViewerAccessMigration},
 	}
 }
 
