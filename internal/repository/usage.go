@@ -203,6 +203,23 @@ func FindUsageEventRequestIDByID(db *gorm.DB, id int64) (string, error) {
 	return strings.TrimSpace(event.RequestID), nil
 }
 
+func UsageEventBelongsToAPIGroupKey(db *gorm.DB, id int64, apiGroupKey string) (bool, error) {
+	if db == nil {
+		return false, fmt.Errorf("database is nil")
+	}
+	apiGroupKey = strings.TrimSpace(apiGroupKey)
+	if id <= 0 || apiGroupKey == "" {
+		return false, nil
+	}
+	var count int64
+	if err := db.Model(&entities.UsageEvent{}).
+		Where("id = ? AND api_group_key = ?", id, apiGroupKey).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func loadUsageEventRecordsForQuery(db *gorm.DB, query *gorm.DB, costResolver pricing.Resolver) ([]dto.UsageEventRecord, error) {
 	var rows []dto.UsageEventRecord
 	// Request Events cost 只在响应阶段按当前价格配置计算，不回写 usage_events。
