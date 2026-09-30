@@ -145,3 +145,26 @@ func TestSyncCPAAPIKeysDoesNotConsumeIDsForExistingKeys(t *testing.T) {
 		t.Fatalf("expected second key id to be 2 without upsert sequence burn, got %d", row.ID)
 	}
 }
+
+
+func TestSyncCPAAPIKeysPreservesViewerAccess(t *testing.T) {
+	db := openTestDatabase(t)
+	firstSync := time.Date(2026, 9, 30, 10, 0, 0, 0, time.UTC)
+	if err := repository.SyncCPAAPIKeys(db, []string{"sk-alpha123456"}, firstSync); err != nil {
+		t.Fatalf("initial sync returned error: %v", err)
+	}
+	if err := repository.UpdateCPAAPIKeyViewerAccess(db, 1, true, true); err != nil {
+		t.Fatalf("UpdateCPAAPIKeyViewerAccess returned error: %v", err)
+	}
+	if err := repository.SyncCPAAPIKeys(db, []string{"sk-alpha123456"}, firstSync.Add(time.Hour)); err != nil {
+		t.Fatalf("repeat sync returned error: %v", err)
+	}
+
+	var row entities.CPAAPIKey
+	if err := db.Where("id = ?", 1).First(&row).Error; err != nil {
+		t.Fatalf("reload API key: %v", err)
+	}
+	if !row.ViewerEventsEnabled || !row.ViewerRequestLogsEnabled {
+		t.Fatalf("expected viewer access to survive sync, got %+v", row)
+	}
+}

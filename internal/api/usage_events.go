@@ -143,6 +143,168 @@ type usageEventStreamFunc func(func(servicedto.UsageEventRecord) error) error
 
 const usageEventsExportMaxConcurrency = 2
 
+func registerKeyUsageEventsRoute(
+	router gin.IRoutes,
+	usageProvider service.UsageProvider,
+	requestLogProvider service.RequestLogProvider,
+	requestLogDownloadTokens *requestLogDownloadTokenStore,
+	requestLogAccessEnabled bool,
+) {
+	router.GET("/key-events", func(c *gin.Context) {
+		session, viewerKey, ok := activeAPIKeyViewerContext(c)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			return
+		}
+		if !viewerKey.ViewerEventsEnabled {
+			c.JSON(http.StatusForbidden, gin.H{"error": "request event access is not enabled for this API key"})
+			return
+		}
+		if usageProvider == nil {
+			c.JSON(http.StatusOK, usageEventsResponse{Events: []usageEventPayload{}, Page: 1, PageSize: servicedto.DefaultUsageEventsLimit})
+			return
+		}
+
+		filter, err := parseUsageFilterQuery(c.Request, timeutil.NormalizeStorageTime(time.Now()))
+		if err != nil {
+			writeUsageFilterParseError(c, err)
+			return
+		}
+		// Viewer event access is always scoped to the session key. Source/credential filters are
+		// intentionally cleared so a viewer cannot use this endpoint to probe shared credentials.
+		filter.APIKeyID = strconv.FormatInt(session.CPAAPIKeyID, 10)
+		filter.Source = ""
+		filter.AuthIndex = ""
+		filter.AuthType = ""
+
+		rows, err := usageProvider.ListUsageEvents(c.Request.Context(), filter)
+		if err != nil {
+			writeInternalError(c, "list key usage events failed", err)
+			return
+		}
+
+		nextCursor := ""
+		if filter.CursorMode && rows.HasMore && len(rows.Events) > 0 {
+			lastEvent := rows.Events[len(rows.Events)-1]
+			nextCursor = encodeUsageEventsCursor(lastEvent.Timestamp, lastEvent.ID)
+		}
+		setNoStoreHeaders(c)
+		c.JSON(http.StatusOK, usageEventsResponse{
+			Events:     buildKeyUsageEventsPayload(rows.Events, viewerKey),
+			TotalCount: rows.TotalCount,
+			Page:       rows.Page,
+			PageSize:   rows.PageSize,
+			TotalPages: rows.TotalPages,
+			NextCursor: nextCursor,
+			HasMore:    rows.HasMore,
+		})
+	})
+
+	router.GET("/key-events/:id/request-log", func(c *gin.Context) {
+		session, viewerKey, ok := activeAPIKeyViewerContext(c)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			return
+		}
+		if !viewerKey.ViewerEventsEnabled || !viewerKey.ViewerRequestLogsEnabled {
+			c.JSON(http.StatusForbidden, gin.H{"error": "request log access is not enabled for this API key"})
+			return
+		}
+		if !requestLogAccessEnabled {
+			writeUsageEventRequestLogAccessDisabled(c)
+			return
+		}
+		if requestLogProvider == nil {
+			writeInternalError(c, "request log provider is not configured", nil)
+			return
+		}
+		eventID, ok := parseUsageEventRequestLogEventID(c)
+		if !ok || !verifyKeyViewerUsageEventOwnership(c, usageProvider, eventID, session.CPAAPIKeyID) {
+			return
+		}
+		response, err := requestLogProvider.GetUsageEventRequestLog(c.Request.Context(), eventID)
+		if err != nil {
+			writeUsageEventRequestLogError(c, err)
+			return
+		}
+		setNoStoreHeaders(c)
+		c.JSON(http.StatusOK, buildUsageEventRequestLogPayload(response))
+	})
+
+	router.POST("/key-events/:id/request-log/download-token", func(c *gin.Context) {
+		session, viewerKey, ok := activeAPIKeyViewerContext(c)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
+			return
+		}
+		if !viewerKey.ViewerEventsEnabled || !viewerKey.ViewerRequestLogsEnabled {
+			c.JSON(http.StatusForbidden, gin.H{"error": "request log access is not enabled for this API key"})
+			return
+		}
+		if !requestLogAccessEnabled {
+			writeUsageEventRequestLogAccessDisabled(c)
+			return
+		}
+		if requestLogProvider == nil {
+			writeInternalError(c, "request log provider is not configured", nil)
+			return
+		}
+		if requestLogDownloadTokens == nil {
+			writeInternalError(c, "request log download token store is not configured", nil)
+			return
+		}
+		eventID, ok := parseUsageEventRequestLogEventID(c)
+		if !ok || !verifyKeyViewerUsageEventOwnership(c, usageProvider, eventID, session.CPAAPIKeyID) {
+			return
+		}
+		token, err := requestLogDownloadTokens.issue(eventID)
+		if err != nil {
+			writeInternalError(c, "issue request log download token failed", err)
+			return
+		}
+		downloadURL := strings.TrimSuffix(c.Request.URL.Path, "/download-token") + "/download-file?token=" + url.QueryEscape(token)
+		setNoStoreHeaders(c)
+		c.JSON(http.StatusOK, usageEventRequestLogDownloadTokenPayload{DownloadURL: downloadURL})
+	})
+}
+
+func verifyKeyViewerUsageEventOwnership(c *gin.Context, usageProvider service.UsageProvider, eventID, apiKeyID int64) bool {
+	ownershipProvider, ok := usageProvider.(service.UsageEventOwnershipProvider)
+	if !ok {
+		writeInternalError(c, "usage event ownership provider is not configured", nil)
+		return false
+	}
+	belongs, err := ownershipProvider.UsageEventBelongsToAPIKey(c.Request.Context(), eventID, strconv.FormatInt(apiKeyID, 10))
+	if err != nil {
+		writeInternalError(c, "verify usage event ownership failed", err)
+		return false
+	}
+	if !belongs {
+		c.JSON(http.StatusNotFound, gin.H{"error": "usage event not found"})
+		return false
+	}
+	return true
+}
+
+func buildKeyUsageEventsPayload(rows []servicedto.UsageEventRecord, viewerKey entities.CPAAPIKey) []usageEventPayload {
+	apiKeyInfos := map[string]analysisAPIKeyInfo{
+		viewerKey.APIKey: {
+			ID:    strconv.FormatInt(viewerKey.ID, 10),
+			Label: helper.CPAAPIKeyDisplayName(viewerKey),
+		},
+	}
+	payload := buildUsageEventsPayload(rows, newUsageIdentityResolver(nil), apiKeyInfos)
+	for index := range payload {
+		// Credential/source identity is shared administrator metadata and is never exposed to a key viewer.
+		payload[index].Source = ""
+		payload[index].SourceRaw = ""
+		payload[index].SourceType = ""
+		payload[index].AuthIndex = ""
+		payload[index].IsDelete = false
+	}
+	return payload
+}
+
 func registerUsageEventsRoute(
 	router gin.IRoutes,
 	usageProvider service.UsageProvider,
@@ -334,7 +496,7 @@ func registerUsageEventRequestLogDownloadTokenRoutes(
 	requestLogDownloadTokens *requestLogDownloadTokenStore,
 	requestLogAccessEnabled bool,
 ) {
-	router.GET("/usage/events/:id/request-log/download-file", func(c *gin.Context) {
+	handler := func(c *gin.Context) {
 		if !requestLogAccessEnabled {
 			writeUsageEventRequestLogAccessDisabled(c)
 			return
@@ -356,7 +518,9 @@ func registerUsageEventRequestLogDownloadTokenRoutes(
 			return
 		}
 		streamUsageEventRequestLogDownload(c, requestLogProvider, eventID)
-	})
+	}
+	router.GET("/usage/events/:id/request-log/download-file", handler)
+	router.GET("/key-events/:id/request-log/download-file", handler)
 }
 
 func writeUsageEventRequestLogAccessDisabled(c *gin.Context) {

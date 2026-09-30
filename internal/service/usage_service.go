@@ -21,3 +21,8 @@ type UsageProvider interface {
 type UsageComparisonProvider interface {
 	GetUsageOverviewComparisons(context.Context, servicedto.UsageFilter) (*servicedto.UsageOverviewSnapshot, error)
 }
+
+// UsageEventOwnershipProvider is used by scoped viewers before reading request logs by event ID.
+type UsageEventOwnershipProvider interface {
+	UsageEventBelongsToAPIKey(context.Context, int64, string) (bool, error)
+}

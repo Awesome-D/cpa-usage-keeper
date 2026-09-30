@@ -368,6 +368,8 @@ export interface RequestEventsDetailsCardProps {
   onRequestLogClose?: () => void;
   onRequestLogDownload?: (eventId: string) => void;
   requestLogDownloading?: boolean;
+  showSourceFilter?: boolean;
+  showExport?: boolean;
 }
 
 const toNumber = (value: unknown): number => {
@@ -607,6 +609,8 @@ export function RequestEventsDetailsCard({
   onRequestLogClose,
   onRequestLogDownload,
   requestLogDownloading = false,
+  showSourceFilter = true,
+  showExport = true,
 }: RequestEventsDetailsCardProps) {
   const { t } = useTranslation();
   const {
@@ -1153,7 +1157,7 @@ export function RequestEventsDetailsCard({
       },
     ];
 
-    return definitions;
+    return showSourceFilter ? definitions : definitions.filter((definition) => definition.id !== 'source');
   }, [
     handleRequestEventsTooltipBlur,
     handleRequestEventsTooltipFocus,
@@ -1165,6 +1169,7 @@ export function RequestEventsDetailsCard({
     requestLogAccessEnabled,
     requestLogLoadingEventId,
     renderClientMetadataCell,
+    showSourceFilter,
     speedHint,
     t,
     ttftHint,
@@ -1184,13 +1189,13 @@ export function RequestEventsDetailsCard({
 
   const hasActiveFilters =
     modelFilter !== ALL_FILTER ||
-    sourceFilter !== ALL_FILTER ||
+    (showSourceFilter && sourceFilter !== ALL_FILTER) ||
     resultFilter !== ALL_FILTER;
 
 
   const handleClearFilters = () => {
     onModelFilterChange(ALL_FILTER);
-    onSourceFilterChange(ALL_FILTER);
+    if (showSourceFilter) onSourceFilterChange(ALL_FILTER);
     onResultFilterChange(ALL_FILTER);
   };
 
@@ -1221,13 +1226,15 @@ export function RequestEventsDetailsCard({
               <IconSettings size={12} aria-hidden="true" />
               <span>{t('usage_stats.request_events_columns')}</span>
             </MainActionButton>
-            <RequestEventsExportMenu
-              label={t('usage_stats.export')}
-              csvLabel={t('usage_stats.export_csv')}
-              jsonLabel={t('usage_stats.export_json')}
-              exportingFormat={exportingFormat}
-              onExport={onExport}
-            />
+            {showExport && (
+              <RequestEventsExportMenu
+                label={t('usage_stats.export')}
+                csvLabel={t('usage_stats.export_csv')}
+                jsonLabel={t('usage_stats.export_json')}
+                exportingFormat={exportingFormat}
+                onExport={onExport}
+              />
+            )}
           </div>
         }
       >
@@ -1251,23 +1258,25 @@ export function RequestEventsDetailsCard({
                 fullWidth={false}
               />
             </div>
-            <div className={styles.requestEventsFilterItem}>
-              <span className={styles.requestEventsFilterLabel}>
-                {t('usage_stats.request_events_filter_source')}
-              </span>
-              <Select
-                value={effectiveSourceFilter}
-                options={sourceOptions}
-                onChange={onSourceFilterChange}
-                search={{
-                  placeholder: t('usage_stats.request_events_search_source'),
-                  noResultsText: t('usage_stats.request_events_no_matching_sources'),
-                }}
-                className={`${styles.requestEventsSelect} ${styles.usagePillControl}`}
-                ariaLabel={t('usage_stats.request_events_filter_source')}
-                fullWidth={false}
-              />
-            </div>
+            {showSourceFilter && (
+              <div className={styles.requestEventsFilterItem}>
+                <span className={styles.requestEventsFilterLabel}>
+                  {t('usage_stats.request_events_filter_source')}
+                </span>
+                <Select
+                  value={effectiveSourceFilter}
+                  options={sourceOptions}
+                  onChange={onSourceFilterChange}
+                  search={{
+                    placeholder: t('usage_stats.request_events_search_source'),
+                    noResultsText: t('usage_stats.request_events_no_matching_sources'),
+                  }}
+                  className={`${styles.requestEventsSelect} ${styles.usagePillControl}`}
+                  ariaLabel={t('usage_stats.request_events_filter_source')}
+                  fullWidth={false}
+                />
+              </div>
+            )}
             <div className={styles.requestEventsFilterItem}>
               <span className={styles.requestEventsFilterLabel}>
                 {t('usage_stats.request_events_filter_result')}

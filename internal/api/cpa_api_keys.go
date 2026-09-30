@@ -31,12 +31,14 @@ type cpaAPIKeyListResponse struct {
 }
 
 type cpaAPIKeySettingsResponse struct {
-	ID           string  `json:"id"`
-	APIKey       string  `json:"apiKey"`
-	KeyAlias     string  `json:"keyAlias"`
-	DisplayKey   string  `json:"displayKey"`
-	Label        string  `json:"label"`
-	LastSyncedAt *string `json:"lastSyncedAt"`
+	ID                       string  `json:"id"`
+	APIKey                   string  `json:"apiKey"`
+	KeyAlias                 string  `json:"keyAlias"`
+	DisplayKey               string  `json:"displayKey"`
+	Label                    string  `json:"label"`
+	LastSyncedAt             *string `json:"lastSyncedAt"`
+	ViewerEventsEnabled      bool    `json:"viewerEventsEnabled"`
+	ViewerRequestLogsEnabled bool    `json:"viewerRequestLogsEnabled"`
 }
 
 type cpaAPIKeySettingsListResponse struct {
@@ -54,6 +56,11 @@ type cpaAPIKeyOptionsResponse struct {
 
 type updateCPAAPIKeyAliasRequest struct {
 	KeyAlias string `json:"keyAlias"`
+}
+
+type updateCPAAPIKeyViewerAccessRequest struct {
+	ViewerEventsEnabled      bool `json:"viewerEventsEnabled"`
+	ViewerRequestLogsEnabled bool `json:"viewerRequestLogsEnabled"`
 }
 
 func registerCPAAPIKeyRoutes(router gin.IRoutes, provider service.CPAAPIKeyProvider) {
@@ -79,6 +86,51 @@ func registerCPAAPIKeyRoutes(router gin.IRoutes, provider service.CPAAPIKeyProvi
 			return
 		}
 		c.JSON(http.StatusOK, cpaAPIKeyOptionsResponse{Options: rows})
+	})
+
+	router.PUT("/usage/api-keys/:id/viewer-access", func(c *gin.Context) {
+		if provider == nil {
+			c.JSON(http.StatusNotImplemented, gin.H{"error": "api key provider is not configured"})
+			return
+		}
+		accessProvider, ok := provider.(service.CPAAPIKeyViewerAccessProvider)
+		if !ok {
+			c.JSON(http.StatusNotImplemented, gin.H{"error": "api key viewer access provider is not configured"})
+			return
+		}
+		id, err := strconv.ParseInt(strings.TrimSpace(c.Param("id")), 10, 64)
+		if err != nil || id <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid api key id"})
+			return
+		}
+		var request updateCPAAPIKeyViewerAccessRequest
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			return
+		}
+		if request.ViewerRequestLogsEnabled && !request.ViewerEventsEnabled {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "request log access requires request event access"})
+			return
+		}
+		row, err := accessProvider.UpdateCPAAPIKeyViewerAccess(
+			c.Request.Context(),
+			id,
+			request.ViewerEventsEnabled,
+			request.ViewerRequestLogsEnabled,
+		)
+		if err != nil {
+			if errors.Is(err, service.ErrInvalidID) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid api key id"})
+				return
+			}
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "api key not found"})
+				return
+			}
+			writeInternalError(c, "update api key viewer access failed", err)
+			return
+		}
+		c.JSON(http.StatusOK, toCPAAPIKeySettingsResponse(row))
 	})
 
 	router.PATCH("/usage/api-keys/:id", func(c *gin.Context) {
@@ -190,12 +242,14 @@ func toCPAAPIKeySettingsResponse(row entities.CPAAPIKey) cpaAPIKeySettingsRespon
 		lastSyncedAt = &value
 	}
 	return cpaAPIKeySettingsResponse{
-		ID:           strconv.FormatInt(row.ID, 10),
-		APIKey:       row.APIKey,
-		KeyAlias:     row.KeyAlias,
-		DisplayKey:   helper.CPAAPIKeyMaskedDisplayKey(row),
-		Label:        label,
-		LastSyncedAt: lastSyncedAt,
+		ID:                       strconv.FormatInt(row.ID, 10),
+		APIKey:                   row.APIKey,
+		KeyAlias:                 row.KeyAlias,
+		DisplayKey:               helper.CPAAPIKeyMaskedDisplayKey(row),
+		Label:                    label,
+		LastSyncedAt:             lastSyncedAt,
+		ViewerEventsEnabled:      row.ViewerEventsEnabled,
+		ViewerRequestLogsEnabled: row.ViewerRequestLogsEnabled,
 	}
 }
 

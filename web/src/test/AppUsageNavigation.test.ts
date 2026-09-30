@@ -32,6 +32,11 @@ describe('App usage-page route authorization', () => {
     expect(shouldNormalizeRolePath('api_key_viewer', '/key-analysis')).toBe(false);
     expect(getRoleTargetPath('api_key_viewer', '/key-ranking')).toBe('/key-ranking');
     expect(shouldNormalizeRolePath('api_key_viewer', '/key-ranking')).toBe(false);
+    expect(getRoleTargetPath('api_key_viewer', '/key-events')).toBe('/key-overview');
+    expect(shouldNormalizeRolePath('api_key_viewer', '/key-events')).toBe(true);
+    const keyWithEvents = { display_key: 'sk-*********123456', viewer_events_enabled: true };
+    expect(getRoleTargetPath('api_key_viewer', '/key-events', false, keyWithEvents)).toBe('/key-events');
+    expect(shouldNormalizeRolePath('api_key_viewer', '/key-events', false, keyWithEvents)).toBe(false);
     expect(getRoleTargetPath('api_key_viewer', '/key-analysis/')).toBe('/key-overview');
     expect(getRoleTargetPath('api_key_viewer', '//example.com/key-analysis')).toBe('/key-overview');
   });

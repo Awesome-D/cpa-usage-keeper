@@ -2037,6 +2037,54 @@
   line-height: 18px;
 }
 
+.apiKeyViewerAccessField {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.apiKeyViewerAccessOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  min-height: 32px;
+  align-items: center;
+  padding: 5px 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 86%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+}
+
+.apiKeyViewerAccessOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+
+  input {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: var(--primary-color);
+  }
+
+  &:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+.apiKeyViewerAccessHint {
+  padding-left: 10px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
 .apiKeySettingsActions {
   display: flex;
   align-items: center;

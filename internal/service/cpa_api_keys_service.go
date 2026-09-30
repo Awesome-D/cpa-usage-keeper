@@ -21,6 +21,10 @@ type CPAAPIKeyProvider interface {
 	UpdateCPAAPIKeyAlias(ctx context.Context, id int64, keyAlias string) (entities.CPAAPIKey, error)
 }
 
+type CPAAPIKeyViewerAccessProvider interface {
+	UpdateCPAAPIKeyViewerAccess(ctx context.Context, id int64, eventsEnabled, requestLogsEnabled bool) (entities.CPAAPIKey, error)
+}
+
 type cpaAPIKeyService struct {
 	db *gorm.DB
 }
@@ -54,6 +58,16 @@ func (s *cpaAPIKeyService) UpdateCPAAPIKeyAlias(_ context.Context, id int64, key
 	}
 	// UPDATE 由 dbresolver 自动路由 writer；结果回读再用官方 Write clause 固定到同一物理池。
 	if err := repository.UpdateCPAAPIKeyAlias(s.db, id, keyAlias); err != nil {
+		return entities.CPAAPIKey{}, err
+	}
+	return repository.FindActiveCPAAPIKeyByID(s.db.Clauses(dbresolver.Write), id)
+}
+
+func (s *cpaAPIKeyService) UpdateCPAAPIKeyViewerAccess(_ context.Context, id int64, eventsEnabled, requestLogsEnabled bool) (entities.CPAAPIKey, error) {
+	if id <= 0 {
+		return entities.CPAAPIKey{}, ErrInvalidID
+	}
+	if err := repository.UpdateCPAAPIKeyViewerAccess(s.db, id, eventsEnabled, requestLogsEnabled); err != nil {
 		return entities.CPAAPIKey{}, err
 	}
 	return repository.FindActiveCPAAPIKeyByID(s.db.Clauses(dbresolver.Write), id)

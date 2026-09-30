@@ -4,6 +4,8 @@ export interface AuthSessionAPIKeySummary {
   display_key: string
   alias?: string
   local_ranking_enabled?: boolean
+  viewer_events_enabled?: boolean
+  viewer_request_logs_enabled?: boolean
 }
 
 export interface AuthSessionResponse {
@@ -817,6 +819,8 @@ export interface CpaApiKeyDisplayItem {
 
 export interface CpaApiKeySettingsItem extends CpaApiKeyDisplayItem {
   apiKey: string
+  viewerEventsEnabled?: boolean
+  viewerRequestLogsEnabled?: boolean
 }
 
 export interface CpaApiKeyOption {
