@@ -819,8 +819,8 @@ export interface CpaApiKeyDisplayItem {
 
 export interface CpaApiKeySettingsItem extends CpaApiKeyDisplayItem {
   apiKey: string
-  viewerEventsEnabled: boolean
-  viewerRequestLogsEnabled: boolean
+  viewerEventsEnabled?: boolean
+  viewerRequestLogsEnabled?: boolean
 }
 
 export interface CpaApiKeyOption {
