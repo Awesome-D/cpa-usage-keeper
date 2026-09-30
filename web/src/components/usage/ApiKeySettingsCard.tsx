@@ -92,10 +92,11 @@ export interface ApiKeySettingsCardProps {
   loading?: boolean;
   savingId?: string | null;
   onSaveAlias: (id: string, keyAlias: string) => void | Promise<void>;
+  onSaveViewerAccess?: (id: string, eventsEnabled: boolean, requestLogsEnabled: boolean) => void | Promise<void>;
   onNotice?: (kind: 'success' | 'info' | 'error', message: string) => void;
 }
 
-export function ApiKeySettingsCard({ apiKeys, loading = false, savingId = null, onSaveAlias, onNotice }: ApiKeySettingsCardProps) {
+export function ApiKeySettingsCard({ apiKeys, loading = false, savingId = null, onSaveAlias, onSaveViewerAccess, onNotice }: ApiKeySettingsCardProps) {
   const { t } = useTranslation();
   const [showFullApiKeys, setShowFullApiKeys] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -107,10 +108,19 @@ export function ApiKeySettingsCard({ apiKeys, loading = false, savingId = null, 
     [apiKeys],
   );
   const [draftAliases, setDraftAliases] = useState<Record<string, string>>(initialAliases);
+  const initialViewerAccess = useMemo<Record<string, { eventsEnabled: boolean; requestLogsEnabled: boolean }>>(
+    () => Object.fromEntries(apiKeys.map((item) => [item.id, {
+      eventsEnabled: item.viewerEventsEnabled === true,
+      requestLogsEnabled: item.viewerRequestLogsEnabled === true,
+    }])),
+    [apiKeys],
+  );
+  const [draftViewerAccess, setDraftViewerAccess] = useState(initialViewerAccess);
 
   useEffect(() => {
     setDraftAliases(initialAliases);
-  }, [initialAliases]);
+    setDraftViewerAccess(initialViewerAccess);
+  }, [initialAliases, initialViewerAccess]);
 
   useEffect(() => () => {
     if (copyResetTimerRef.current) {
@@ -166,6 +176,7 @@ export function ApiKeySettingsCard({ apiKeys, loading = false, savingId = null, 
             {apiKeys.map((item) => {
               const draftAlias = draftAliases[item.id] ?? '';
               const disabled = savingId === item.id;
+              const draftAccess = draftViewerAccess[item.id] ?? { eventsEnabled: false, requestLogsEnabled: false };
               const apiKey = getApiKeySettingsVisibleKey(item, showFullApiKeys);
               const copyLabel = copiedId === item.id ? t('usage_stats.api_key_settings_copied') : t('usage_stats.api_key_settings_copy');
               return (
@@ -210,6 +221,61 @@ export function ApiKeySettingsCard({ apiKeys, loading = false, savingId = null, 
                         {disabled ? t('usage_stats.api_key_settings_saving') : t('common.save')}
                       </Button>
                     </div>
+                    {onSaveViewerAccess && (
+                      <>
+                        <div className={styles.apiKeyViewerAccessField}>
+                          <span className={styles.apiKeyAliasLabel}>{t('usage_stats.api_key_settings_viewer_access')}</span>
+                          <div className={styles.apiKeyViewerAccessOptions}>
+                            <label className={styles.apiKeyViewerAccessOption}>
+                              <input
+                                type="checkbox"
+                                checked={draftAccess.eventsEnabled}
+                                disabled={disabled}
+                                onChange={(event) => {
+                                  const eventsEnabled = event.target.checked;
+                                  setDraftViewerAccess((current) => ({
+                                    ...current,
+                                    [item.id]: {
+                                      eventsEnabled,
+                                      requestLogsEnabled: eventsEnabled ? (current[item.id]?.requestLogsEnabled ?? false) : false,
+                                    },
+                                  }));
+                                }}
+                              />
+                              <span>{t('usage_stats.api_key_settings_viewer_events')}</span>
+                            </label>
+                            <label className={styles.apiKeyViewerAccessOption}>
+                              <input
+                                type="checkbox"
+                                checked={draftAccess.requestLogsEnabled}
+                                disabled={disabled || !draftAccess.eventsEnabled}
+                                onChange={(event) => setDraftViewerAccess((current) => ({
+                                  ...current,
+                                  [item.id]: {
+                                    eventsEnabled: true,
+                                    requestLogsEnabled: event.target.checked,
+                                  },
+                                }))}
+                              />
+                              <span>{t('usage_stats.api_key_settings_viewer_request_logs')}</span>
+                            </label>
+                          </div>
+                          <span className={styles.apiKeyViewerAccessHint}>{t('usage_stats.api_key_settings_viewer_access_hint')}</span>
+                        </div>
+                        <div className={styles.apiKeySettingsActions}>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            appearance="action"
+                            className={styles.apiKeySettingsSaveButton}
+                            onClick={() => onSaveViewerAccess(item.id, draftAccess.eventsEnabled, draftAccess.requestLogsEnabled)}
+                            disabled={disabled}
+                          >
+                            {disabled ? t('usage_stats.api_key_settings_saving') : t('usage_stats.api_key_settings_save_access')}
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
