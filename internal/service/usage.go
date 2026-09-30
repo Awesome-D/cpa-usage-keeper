@@ -716,6 +716,15 @@ func (s *usageService) ListUsageEvents(ctx context.Context, filter servicedto.Us
 	return &servicedto.UsageEventsPage{Events: result, TotalCount: page.TotalCount, Page: page.Page, PageSize: page.PageSize, TotalPages: page.TotalPages, HasMore: page.HasMore}, nil
 }
 
+func (s *usageService) UsageEventBelongsToAPIKey(ctx context.Context, eventID int64, apiKeyID string) (bool, error) {
+	ctx = usageServiceContext(ctx)
+	apiGroupKey, err := s.resolveAPIGroupKey(ctx, apiKeyID)
+	if err != nil {
+		return false, err
+	}
+	return repository.UsageEventBelongsToAPIGroupKey(s.db.WithContext(ctx), eventID, apiGroupKey)
+}
+
 // StreamUsageEvents 使用 Request Event Log 相同筛选条件逐行导出，不应用分页。
 func (s *usageService) StreamUsageEvents(ctx context.Context, filter servicedto.UsageFilter, emit func(servicedto.UsageEventRecord) error) error {
 	ctx = usageServiceContext(ctx)
