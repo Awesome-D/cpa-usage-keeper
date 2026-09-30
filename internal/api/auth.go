@@ -71,8 +71,8 @@ type sessionAPIKeyResponse struct {
 	DisplayKey               string `json:"display_key"`
 	Alias                    string `json:"alias,omitempty"`
 	LocalRankingEnabled      bool   `json:"local_ranking_enabled,omitempty"`
-	ViewerEventsEnabled      bool   `json:"viewer_events_enabled"`
-	ViewerRequestLogsEnabled bool   `json:"viewer_request_logs_enabled"`
+	ViewerEventsEnabled      bool   `json:"viewer_events_enabled,omitempty"`
+	ViewerRequestLogsEnabled bool   `json:"viewer_request_logs_enabled,omitempty"`
 }
 
 type loginResponse struct {
