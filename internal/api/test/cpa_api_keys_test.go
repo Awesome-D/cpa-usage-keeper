@@ -217,3 +217,56 @@ func TestUpdateCPAAPIKeyAliasRejectsInvalidInputAndDeletedRows(t *testing.T) {
 		}
 	}
 }
+
+
+func TestUpdateCPAAPIKeyViewerAccess(t *testing.T) {
+	db := openAPITestDatabase(t)
+	if err := repository.SyncCPAAPIKeys(db, []string{"sk-alpha123456"}, time.Date(2026, 9, 30, 10, 0, 0, 0, time.UTC)); err != nil {
+		t.Fatalf("seed API key: %v", err)
+	}
+	router := keeperapi.NewRouter(nil, nil, nil, nil, keeperapi.AuthConfig{}, nil, "", keeperapi.OptionalProviders{CPAAPIKeys: service.NewCPAAPIKeyService(db)})
+
+	resp := serveCredentialMutation(
+		router,
+		http.MethodPut,
+		"/api/v1/usage/api-keys/1/viewer-access",
+		`{"viewerEventsEnabled":true,"viewerRequestLogsEnabled":true}`,
+	)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", resp.Code, resp.Body.String())
+	}
+
+	var row entities.CPAAPIKey
+	if err := db.Where("id = ?", 1).First(&row).Error; err != nil {
+		t.Fatalf("reload API key: %v", err)
+	}
+	if !row.ViewerEventsEnabled || !row.ViewerRequestLogsEnabled {
+		t.Fatalf("expected both viewer capabilities enabled, got %+v", row)
+	}
+
+	invalid := serveCredentialMutation(
+		router,
+		http.MethodPut,
+		"/api/v1/usage/api-keys/1/viewer-access",
+		`{"viewerEventsEnabled":false,"viewerRequestLogsEnabled":true}`,
+	)
+	if invalid.Code != http.StatusBadRequest {
+		t.Fatalf("expected logs-without-events to return 400, got %d body=%s", invalid.Code, invalid.Body.String())
+	}
+
+	disabled := serveCredentialMutation(
+		router,
+		http.MethodPut,
+		"/api/v1/usage/api-keys/1/viewer-access",
+		`{"viewerEventsEnabled":false,"viewerRequestLogsEnabled":false}`,
+	)
+	if disabled.Code != http.StatusOK {
+		t.Fatalf("expected disabling access to return 200, got %d body=%s", disabled.Code, disabled.Body.String())
+	}
+	if err := db.Where("id = ?", 1).First(&row).Error; err != nil {
+		t.Fatalf("reload disabled API key: %v", err)
+	}
+	if row.ViewerEventsEnabled || row.ViewerRequestLogsEnabled {
+		t.Fatalf("expected both viewer capabilities disabled, got %+v", row)
+	}
+}
