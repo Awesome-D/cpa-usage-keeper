@@ -81,7 +81,7 @@ export function KeyEventsPage({ apiKey, onNavigate, onAuthRequired }: KeyEventsP
                     <td style={{ padding: '10px 8px' }}>{event.model || '-'}</td>
                     <td style={{ textAlign: 'right', padding: '10px 8px' }}>{event.tokens?.total_tokens?.toLocaleString?.() ?? 0}</td>
                     <td style={{ textAlign: 'right', padding: '10px 8px' }}>{event.latency_ms?.toLocaleString?.() ?? 0} ms</td>
-                    <td style={{ padding: '10px 8px' }}>{event.failed ? (event.status_code ?? t('common.error')) : (event.status_code ?? 200)}</td>
+                    <td style={{ padding: '10px 8px' }}>{event.failed ? (event.status_code ?? t('usage_stats.failure')) : (event.status_code ?? 200)}</td>
                   </tr>
                 ))}
               </tbody>
