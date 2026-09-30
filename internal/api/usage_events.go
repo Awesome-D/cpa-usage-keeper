@@ -179,7 +179,7 @@ func registerKeyUsageEventsRoute(
 
 		rows, err := usageProvider.ListUsageEvents(c.Request.Context(), filter)
 		if err != nil {
-			writeUsageProviderError(c, "list key usage events failed", err)
+			writeInternalError(c, "list key usage events failed", err)
 			return
 		}
 
