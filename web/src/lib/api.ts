@@ -1,4 +1,4 @@
-import { type AnalysisLatencyDiagnostics, type AnalysisResponse, type AuthFilesManagementResponse, type AuthManagedSessionsResponse, type AuthSessionResponse, type CodexQuotaHistoryResponse, type CpaApiKeyDisplayItem, type CpaApiKeyOptionsResponse, type CpaApiKeySettingsResponse, type CpaApiKeysResponse, type ErrorEventsResponse, type OverviewRealtimeBlock, type OverviewRealtimeWindow, type PricingEntry, type PricingResponse, type PricingRulesResponse, type PricingSyncPreviewResponse, type PricingSyncSource, type QuotaAutoRefreshSettings, type ReplacePricingRulesRequest, type StatusResponse, type UpdateCheckResponse, type UsageActivityRequest, type UsageActivityResponse, type UsageEventModelFilterOptionsResponse, type UsageEventRequestLogResponse, type UsageEventSourceFilterOptionsResponse, type UsageRangeRequest, type UsedModelsResponse, type UsageIdentitiesPageResponse, type UsageIdentitiesResponse, type UsageEventsResponse, type UsageIdentity, type UsageIdentityAuthType, type UsageOverviewComparisons, type UsageOverviewResponse, type UsageQuotaCacheResponse, type UsageQuotaInspectionStatusResponse, type UsageQuotaRefreshResponse, type UsageQuotaRefreshTaskResponse, type UsageQuotaResetCreditsResponse, type UsageQuotaResetResponse, type VersionResponse } from './types'
+import { type AnalysisLatencyDiagnostics, type AnalysisResponse, type AuthFilesManagementResponse, type AuthManagedSessionsResponse, type AuthSessionResponse, type CodexQuotaHistoryResponse, type CpaApiKeyDisplayItem, type CpaApiKeyOptionsResponse, type CpaApiKeySettingsItem, type CpaApiKeySettingsResponse, type CpaApiKeysResponse, type ErrorEventsResponse, type OverviewRealtimeBlock, type OverviewRealtimeWindow, type PricingEntry, type PricingResponse, type PricingRulesResponse, type PricingSyncPreviewResponse, type PricingSyncSource, type QuotaAutoRefreshSettings, type ReplacePricingRulesRequest, type StatusResponse, type UpdateCheckResponse, type UsageActivityRequest, type UsageActivityResponse, type UsageEventModelFilterOptionsResponse, type UsageEventRequestLogResponse, type UsageEventSourceFilterOptionsResponse, type UsageRangeRequest, type UsedModelsResponse, type UsageIdentitiesPageResponse, type UsageIdentitiesResponse, type UsageEventsResponse, type UsageIdentity, type UsageIdentityAuthType, type UsageOverviewComparisons, type UsageOverviewResponse, type UsageQuotaCacheResponse, type UsageQuotaInspectionStatusResponse, type UsageQuotaRefreshResponse, type UsageQuotaRefreshTaskResponse, type UsageQuotaResetCreditsResponse, type UsageQuotaResetResponse, type VersionResponse } from './types'
 import { isCPAMCEmbed } from '@/embed/cpamcEmbed'
 import { resolveUsageRequestRange } from '@/utils/usage/rangeQuery'
 
@@ -526,6 +526,21 @@ export async function fetchUsageEvents(request: UsageRangeRequest | undefined, s
   return response.json()
 }
 
+export async function fetchKeyUsageEvents(request: UsageRangeRequest | undefined, signal?: AbortSignal, options?: FetchUsageEventsOptions): Promise<UsageEventsResponse> {
+  const params = buildUsageEventsParams(request, {
+    ...options,
+    apiKeyId: undefined,
+    source: undefined,
+    authType: undefined,
+  })
+  const query = params.toString()
+  const response = await apiFetch(`${apiPath('/key-events')}${query ? `?${query}` : ''}`, { signal, cache: 'no-store' })
+  if (!response.ok) {
+    await parseApiError(response, `Failed to load key usage events: ${response.status}`)
+  }
+  return response.json()
+}
+
 export async function fetchErrorEvents(identityId: string, signal?: AbortSignal, cursor?: string, pageSize = 50): Promise<ErrorEventsResponse> {
   const params = new URLSearchParams()
   params.set('page_size', String(pageSize))
@@ -551,6 +566,27 @@ export async function createUsageEventRequestLogDownloadURL(eventId: string): Pr
   const response = await apiFetch(apiPath(`/usage/events/${encodeURIComponent(eventId)}/request-log/download-token`), { method: 'POST', cache: 'no-store' })
   if (!response.ok) {
     await parseApiError(response, `Failed to create usage event request log download URL: ${response.status}`)
+  }
+  const payload = await response.json() as UsageEventRequestLogDownloadURLResponse
+  const downloadURL = payload.download_url?.trim()
+  if (!downloadURL) {
+    throw new ApiError('request log download URL is missing', response.status)
+  }
+  return downloadURL
+}
+
+export async function fetchKeyUsageEventRequestLog(eventId: string, signal?: AbortSignal): Promise<UsageEventRequestLogResponse> {
+  const response = await apiFetch(apiPath(`/key-events/${encodeURIComponent(eventId)}/request-log`), { signal, cache: 'no-store' })
+  if (!response.ok) {
+    await parseApiError(response, `Failed to load key usage event request log: ${response.status}`)
+  }
+  return response.json()
+}
+
+export async function createKeyUsageEventRequestLogDownloadURL(eventId: string): Promise<string> {
+  const response = await apiFetch(apiPath(`/key-events/${encodeURIComponent(eventId)}/request-log/download-token`), { method: 'POST', cache: 'no-store' })
+  if (!response.ok) {
+    await parseApiError(response, `Failed to create key usage event request log download URL: ${response.status}`)
   }
   const payload = await response.json() as UsageEventRequestLogDownloadURLResponse
   const downloadURL = payload.download_url?.trim()
@@ -900,6 +936,24 @@ export async function updateCpaApiKeyAlias(id: string, keyAlias: string): Promis
   })
   if (!response.ok) {
     await parseApiError(response, `Failed to update CPA API key alias: ${response.status}`)
+  }
+  return response.json()
+}
+
+export async function updateCpaApiKeyViewerAccess(
+  id: string,
+  viewerEventsEnabled: boolean,
+  viewerRequestLogsEnabled: boolean,
+): Promise<CpaApiKeySettingsItem> {
+  const response = await apiFetch(apiPath(`/usage/api-keys/${encodeURIComponent(id)}/viewer-access`), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ viewerEventsEnabled, viewerRequestLogsEnabled }),
+  })
+  if (!response.ok) {
+    await parseApiError(response, `Failed to update CPA API key viewer access: ${response.status}`)
   }
   return response.json()
 }
