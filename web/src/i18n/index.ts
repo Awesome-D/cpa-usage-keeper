@@ -81,6 +81,10 @@ const resources = {
         load_failed: 'Unable to load API Key analysis',
         latency_load_failed: 'Unable to load API Key latency diagnostics'
       },
+      key_events: {
+        load_failed: 'Unable to load API Key request events',
+        access_disabled: 'Request event access is not enabled for this API Key.'
+      },
       usage_stats: {
         title: 'Usage',
         refresh: 'Refresh',
@@ -644,7 +648,7 @@ const resources = {
         success_rate: 'Success Rate',
         api_endpoint: 'API',
         api_key_settings_title: 'API Key Settings',
-        api_key_settings_subtitle: 'Set display aliases for synced CPA API keys.',
+        api_key_settings_subtitle: 'Set display aliases and API Key Viewer access for synced CPA API keys.',
         api_key_settings_empty: 'No CPA API keys synced yet.',
         api_key_settings_id: 'Local ID',
         api_key_settings_display_key: 'API Key',
@@ -658,6 +662,13 @@ const resources = {
         api_key_settings_copy_failed: 'Unable to copy API Key. Select the key manually if needed.',
         api_key_settings_alias_save_success: 'API Key alias saved.',
         api_key_settings_alias_save_failed: 'Unable to save API Key alias.',
+        api_key_settings_viewer_access: 'Viewer access',
+        api_key_settings_viewer_events: 'Request events',
+        api_key_settings_viewer_request_logs: 'Raw request logs',
+        api_key_settings_viewer_access_hint: 'Request logs require Request events and remain subject to the global request-log switch.',
+        api_key_settings_save_access: 'Save access',
+        api_key_settings_access_save_success: 'API Key viewer access saved.',
+        api_key_settings_access_save_failed: 'Unable to save API Key viewer access.',
         session_settings_title: 'Session Management',
         session_settings_subtitle: 'Review active dashboard sessions and sign out stale access.',
         session_settings_empty: 'No active sessions.',
@@ -1012,6 +1023,10 @@ const resources = {
       key_analysis: {
         load_failed: '无法加载 API Key 分析',
         latency_load_failed: '无法加载 API Key 延迟诊断'
+      },
+      key_events: {
+        load_failed: '无法加载 API Key 请求明细',
+        access_disabled: '当前 API Key 未开启请求明细访问权限。'
       },
       usage_stats: {
         title: '用量',
@@ -1576,7 +1591,7 @@ const resources = {
         success_rate: '成功率',
         api_endpoint: 'API',
         api_key_settings_title: 'API Key 设置',
-        api_key_settings_subtitle: '为已同步的 CPA API Key 设置展示别名。',
+        api_key_settings_subtitle: '为已同步的 CPA API Key 设置展示别名和查看权限。',
         api_key_settings_empty: '暂无已同步的 CPA API Key。',
         api_key_settings_id: '本地 ID',
         api_key_settings_display_key: 'API Key',
@@ -1590,6 +1605,13 @@ const resources = {
         api_key_settings_copy_failed: '无法复制 API Key，需要时可手动选择复制。',
         api_key_settings_alias_save_success: 'API Key 别名已保存。',
         api_key_settings_alias_save_failed: '无法保存 API Key 别名。',
+        api_key_settings_viewer_access: 'Key 查看权限',
+        api_key_settings_viewer_events: '请求明细',
+        api_key_settings_viewer_request_logs: '原始请求日志',
+        api_key_settings_viewer_access_hint: '原始请求日志依赖“请求明细”，并继续受全局请求日志开关限制。',
+        api_key_settings_save_access: '保存权限',
+        api_key_settings_access_save_success: 'API Key 查看权限已保存。',
+        api_key_settings_access_save_failed: '无法保存 API Key 查看权限。',
         session_settings_title: '会话管理',
         session_settings_subtitle: '查看当前有效的仪表盘会话，并退出不再需要的访问。',
         session_settings_empty: '暂无有效会话。',
@@ -1944,6 +1966,10 @@ const resources = {
       key_analysis: {
         load_failed: '無法載入 API Key 分析',
         latency_load_failed: '無法載入 API Key 延遲診斷'
+      },
+      key_events: {
+        load_failed: '無法載入 API Key 請求明細',
+        access_disabled: '目前 API Key 未開啟請求明細存取權限。'
       },
       usage_stats: {
         title: '用量',
@@ -2508,7 +2534,7 @@ const resources = {
         success_rate: '成功率',
         api_endpoint: 'API',
         api_key_settings_title: 'API Key 設定',
-        api_key_settings_subtitle: '為已同步的 CPA API Key 設定顯示別名。',
+        api_key_settings_subtitle: '為已同步的 CPA API Key 設定顯示別名與檢視權限。',
         api_key_settings_empty: '尚無已同步的 CPA API Key。',
         api_key_settings_id: '本機 ID',
         api_key_settings_display_key: 'API Key',
@@ -2522,6 +2548,13 @@ const resources = {
         api_key_settings_copy_failed: '無法複製 API Key，需要時可手動選取複製。',
         api_key_settings_alias_save_success: 'API Key 別名已儲存。',
         api_key_settings_alias_save_failed: '無法儲存 API Key 別名。',
+        api_key_settings_viewer_access: 'Key 檢視權限',
+        api_key_settings_viewer_events: '請求明細',
+        api_key_settings_viewer_request_logs: '原始請求日誌',
+        api_key_settings_viewer_access_hint: '原始請求日誌依賴「請求明細」，並持續受全域請求日誌開關限制。',
+        api_key_settings_save_access: '儲存權限',
+        api_key_settings_access_save_success: 'API Key 檢視權限已儲存。',
+        api_key_settings_access_save_failed: '無法儲存 API Key 檢視權限。',
         session_settings_title: '工作階段管理',
         session_settings_subtitle: '查看目前有效的儀表板工作階段，並登出不再需要的存取。',
         session_settings_empty: '尚無有效工作階段。',
