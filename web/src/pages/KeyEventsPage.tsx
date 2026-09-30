@@ -326,6 +326,8 @@ export function KeyEventsPage({ apiKey, onNavigate, onAuthRequired }: KeyEventsP
         onRequestLogClose={handleRequestLogClose}
         onRequestLogDownload={handleRequestLogDownload}
         requestLogDownloading={requestLogDownloading}
+        showSourceFilter={false}
+        showExport={false}
       />
     </KeyViewerShell>
   );
