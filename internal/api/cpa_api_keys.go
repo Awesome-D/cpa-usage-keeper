@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -31,12 +32,13 @@ type cpaAPIKeyListResponse struct {
 }
 
 type cpaAPIKeySettingsResponse struct {
-	ID           string  `json:"id"`
-	APIKey       string  `json:"apiKey"`
-	KeyAlias     string  `json:"keyAlias"`
-	DisplayKey   string  `json:"displayKey"`
-	Label        string  `json:"label"`
-	LastSyncedAt *string `json:"lastSyncedAt"`
+	ID           string   `json:"id"`
+	APIKey       string   `json:"apiKey"`
+	KeyAlias     string   `json:"keyAlias"`
+	DisplayKey   string   `json:"displayKey"`
+	Label        string   `json:"label"`
+	Permissions  []string `json:"permissions"`
+	LastSyncedAt *string  `json:"lastSyncedAt"`
 }
 
 type cpaAPIKeySettingsListResponse struct {
@@ -54,6 +56,14 @@ type cpaAPIKeyOptionsResponse struct {
 
 type updateCPAAPIKeyAliasRequest struct {
 	KeyAlias string `json:"keyAlias"`
+}
+
+type updateCPAAPIKeyViewerPermissionsRequest struct {
+	Permissions []string `json:"permissions"`
+}
+
+type cpaAPIKeyViewerPermissionsUpdater interface {
+	UpdateCPAAPIKeyViewerPermissions(ctx context.Context, id int64, permissions string) (entities.CPAAPIKey, error)
 }
 
 func registerCPAAPIKeyRoutes(router gin.IRoutes, provider service.CPAAPIKeyProvider) {
@@ -79,6 +89,43 @@ func registerCPAAPIKeyRoutes(router gin.IRoutes, provider service.CPAAPIKeyProvi
 			return
 		}
 		c.JSON(http.StatusOK, cpaAPIKeyOptionsResponse{Options: rows})
+	})
+
+	router.PATCH("/usage/api-keys/:id/viewer-permissions", func(c *gin.Context) {
+		updater, ok := provider.(cpaAPIKeyViewerPermissionsUpdater)
+		if !ok {
+			c.JSON(http.StatusNotImplemented, gin.H{"error": "api key viewer permission updates are not configured"})
+			return
+		}
+		id, err := strconv.ParseInt(strings.TrimSpace(c.Param("id")), 10, 64)
+		if err != nil || id <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid api key id"})
+			return
+		}
+		var request updateCPAAPIKeyViewerPermissionsRequest
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			return
+		}
+		normalized, valid := normalizeKeyViewerPermissions(request.Permissions)
+		if !valid {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported viewer permission"})
+			return
+		}
+		row, err := updater.UpdateCPAAPIKeyViewerPermissions(c.Request.Context(), id, normalized)
+		if err != nil {
+			if errors.Is(err, service.ErrInvalidID) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid api key id"})
+				return
+			}
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "api key not found"})
+				return
+			}
+			writeInternalError(c, "update api key viewer permissions failed", err)
+			return
+		}
+		c.JSON(http.StatusOK, toCPAAPIKeySettingsResponse(row))
 	})
 
 	router.PATCH("/usage/api-keys/:id", func(c *gin.Context) {
@@ -195,6 +242,7 @@ func toCPAAPIKeySettingsResponse(row entities.CPAAPIKey) cpaAPIKeySettingsRespon
 		KeyAlias:     row.KeyAlias,
 		DisplayKey:   helper.CPAAPIKeyMaskedDisplayKey(row),
 		Label:        label,
+		Permissions:  parseKeyViewerPermissions(row.ViewerPermissions),
 		LastSyncedAt: lastSyncedAt,
 	}
 }

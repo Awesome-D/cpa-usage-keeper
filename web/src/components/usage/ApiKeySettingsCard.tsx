@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { IconCheck, IconCopy, IconEye, IconEyeOff } from '@/components/ui/icons';
 import { useScrollBoundaryContainment } from '@/hooks/useScrollBoundaryContainment';
-import type { CpaApiKeySettingsItem } from '@/lib/types';
+import type { CpaApiKeySettingsItem, KeyViewerPermission } from '@/lib/types';
 import styles from '@/pages/UsagePage.module.scss';
 
 type ClipboardWriter = Pick<Clipboard, 'writeText'>;
@@ -92,10 +92,11 @@ export interface ApiKeySettingsCardProps {
   loading?: boolean;
   savingId?: string | null;
   onSaveAlias: (id: string, keyAlias: string) => void | Promise<void>;
+  onSavePermissions: (id: string, permissions: KeyViewerPermission[]) => void | Promise<void>;
   onNotice?: (kind: 'success' | 'info' | 'error', message: string) => void;
 }
 
-export function ApiKeySettingsCard({ apiKeys, loading = false, savingId = null, onSaveAlias, onNotice }: ApiKeySettingsCardProps) {
+export function ApiKeySettingsCard({ apiKeys, loading = false, savingId = null, onSaveAlias, onSavePermissions, onNotice }: ApiKeySettingsCardProps) {
   const { t } = useTranslation();
   const [showFullApiKeys, setShowFullApiKeys] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -197,6 +198,21 @@ export function ApiKeySettingsCard({ apiKeys, loading = false, savingId = null, 
                         className={`${styles.usagePillControl} ${styles.apiKeyAliasInput}`.trim()}
                         disabled={disabled}
                       />
+                    </label>
+                    <label className={styles.apiKeyAliasField}>
+                      <span className={styles.apiKeyAliasLabel}>{t('usage_stats.api_key_settings_viewer_permissions')}</span>
+                      <span>
+                        <input
+                          type="checkbox"
+                          checked={item.permissions?.includes('request_events') ?? false}
+                          disabled={disabled}
+                          onChange={(event) => {
+                            const nextPermissions: KeyViewerPermission[] = event.target.checked ? ['request_events'] : [];
+                            void onSavePermissions(item.id, nextPermissions);
+                          }}
+                        />{' '}
+                        {t('usage_stats.api_key_settings_permission_request_events')}
+                      </span>
                     </label>
                     <div className={styles.apiKeySettingsActions}>
                       <Button

@@ -2,7 +2,7 @@ import { CredentialEditModal } from '@/components/usage/credentials/CredentialEd
 import { UsageComparisonCharts } from '@/components/usage/UsageComparisonCharts';
 import { useState, useMemo, useCallback, useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ApiError, appPath, createUsageEventRequestLogDownloadURL, exportUsageEvents, fetchAnalysis, fetchAnalysisLatency, fetchAuthSessions, fetchCpaApiKeyOptions, fetchCpaApiKeySettings, fetchStatus, fetchUpdateCheck, fetchUsageEventModelFilterOptions, fetchUsageEventRequestLog, fetchUsageEventSourceFilterOptions, fetchUsageEvents, fetchUsageIdentity, fetchVersion, isUsageRangeBoundsConflict, logout, revokeAuthSession, updateAuthSessionAlias, updateCpaApiKeyAlias, type UsageEventsExportFormat } from '@/lib/api';
+import { ApiError, appPath, createUsageEventRequestLogDownloadURL, exportUsageEvents, fetchAnalysis, fetchAnalysisLatency, fetchAuthSessions, fetchCpaApiKeyOptions, fetchCpaApiKeySettings, fetchStatus, fetchUpdateCheck, fetchUsageEventModelFilterOptions, fetchUsageEventRequestLog, fetchUsageEventSourceFilterOptions, fetchUsageEvents, fetchUsageIdentity, fetchVersion, isUsageRangeBoundsConflict, logout, revokeAuthSession, updateAuthSessionAlias, updateCpaApiKeyAlias, updateCpaApiKeyViewerPermissions, type UsageEventsExportFormat } from '@/lib/api';
 import type { AnalysisLatencyDiagnostics, AnalysisResponse, AuthManagedSessionItem, CpaApiKeyOption, CpaApiKeySettingsItem, OverviewRealtimeWindow, StatusResponse, UsageCustomRange, UsageEvent, UsageEventRequestLogResponse, UsageSourceFilterOption, UsageTimeRange, VersionResponse } from '@/lib/types';
 import { DEFAULT_USAGE_TAB, getUsageTabPath, handleUsageTabKeyActivation, resolveInitialUsageTab, shouldHandleUsageNavigation, USAGE_TAB_OPTIONS, type UsageTab } from '@/lib/usageNavigation';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -1184,6 +1184,25 @@ export function UsagePage({ onAuthRequired }: { onAuthRequired?: () => void }) {
       setApiKeySettingsSavingId(null);
     }
   }, [onAuthRequired, patchLocalRankingProfileCache, showTopNotice, t]);
+
+  const handleSaveApiKeyViewerPermissions = useCallback(async (id: string, permissions: CpaApiKeySettingsItem['permissions']) => {
+    setApiKeySettingsSavingId(id);
+    setApiKeySettingsError('');
+    try {
+      const updated = await updateCpaApiKeyViewerPermissions(id, permissions);
+      setApiKeySettings((current) => current.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)));
+      showTopNotice('success', t('usage_stats.api_key_settings_permissions_save_success'));
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        onAuthRequired?.();
+        return;
+      }
+      setApiKeySettingsError(error instanceof Error ? error.message : 'Failed to update CPA API key viewer permissions');
+      showTopNotice('error', t('usage_stats.api_key_settings_permissions_save_failed'));
+    } finally {
+      setApiKeySettingsSavingId(null);
+    }
+  }, [onAuthRequired, showTopNotice, t]);
 
   const handleRevokeAuthSession = useCallback(async (session: AuthManagedSessionItem) => {
     setAuthSessionRevokingId(session.id);
@@ -2444,6 +2463,7 @@ export function UsagePage({ onAuthRequired }: { onAuthRequired?: () => void }) {
                   loading={apiKeySettingsLoading}
                   savingId={apiKeySettingsSavingId}
                   onSaveAlias={handleSaveApiKeyAlias}
+                  onSavePermissions={handleSaveApiKeyViewerPermissions}
                   onNotice={showTopNotice}
                 />
                 <PriceSettingsCard

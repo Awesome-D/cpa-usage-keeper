@@ -58,3 +58,13 @@ func (s *cpaAPIKeyService) UpdateCPAAPIKeyAlias(_ context.Context, id int64, key
 	}
 	return repository.FindActiveCPAAPIKeyByID(s.db.Clauses(dbresolver.Write), id)
 }
+
+func (s *cpaAPIKeyService) UpdateCPAAPIKeyViewerPermissions(_ context.Context, id int64, permissions string) (entities.CPAAPIKey, error) {
+	if id <= 0 {
+		return entities.CPAAPIKey{}, ErrInvalidID
+	}
+	if err := repository.UpdateCPAAPIKeyViewerPermissions(s.db, id, permissions); err != nil {
+		return entities.CPAAPIKey{}, err
+	}
+	return repository.FindActiveCPAAPIKeyByID(s.db.Clauses(dbresolver.Write), id)
+}

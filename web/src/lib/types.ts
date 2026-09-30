@@ -1,9 +1,12 @@
 export type AuthRole = 'admin' | 'api_key_viewer'
 
+export type KeyViewerPermission = 'request_events'
+
 export interface AuthSessionAPIKeySummary {
   display_key: string
   alias?: string
   local_ranking_enabled?: boolean
+  permissions?: KeyViewerPermission[]
 }
 
 export interface AuthSessionResponse {
@@ -817,6 +820,17 @@ export interface CpaApiKeyDisplayItem {
 
 export interface CpaApiKeySettingsItem extends CpaApiKeyDisplayItem {
   apiKey: string
+  permissions: KeyViewerPermission[]
+}
+
+export interface KeyUsageEventsResponse {
+  events: UsageEvent[]
+  total_count: number
+  page: number
+  page_size: number
+  total_pages: number
+  next_cursor?: string
+  has_more: boolean
 }
 
 export interface CpaApiKeyOption {

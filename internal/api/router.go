@@ -160,6 +160,9 @@ func NewRouter(
 	registerKeyOverviewRoute(keyViewerProtected, usageProvider)
 	registerKeyActivityRoute(keyViewerProtected, usageProvider)
 	registerKeyUsageAnalysisRoute(keyViewerProtected, usageProvider)
+	keyEventsProtected := keyViewerProtected.Group("")
+	keyEventsProtected.Use(requireKeyViewerPermission(keyViewerPermissionRequestEvents))
+	registerKeyUsageEventsRoute(keyEventsProtected, usageProvider)
 	if rankingProvider != nil {
 		rankinghttpapi.RegisterKeyViewerRoutes(keyViewerProtected, rankingProvider)
 	}
