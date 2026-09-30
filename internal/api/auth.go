@@ -68,9 +68,11 @@ type sessionResponse struct {
 }
 
 type sessionAPIKeyResponse struct {
-	DisplayKey          string `json:"display_key"`
-	Alias               string `json:"alias,omitempty"`
-	LocalRankingEnabled bool   `json:"local_ranking_enabled,omitempty"`
+	DisplayKey               string `json:"display_key"`
+	Alias                    string `json:"alias,omitempty"`
+	LocalRankingEnabled      bool   `json:"local_ranking_enabled,omitempty"`
+	ViewerEventsEnabled      bool   `json:"viewer_events_enabled"`
+	ViewerRequestLogsEnabled bool   `json:"viewer_request_logs_enabled"`
 }
 
 type loginResponse struct {
@@ -262,9 +264,11 @@ func (h *authHandler) getSession(c *gin.Context) {
 			return
 		}
 		response.APIKey = &sessionAPIKeyResponse{
-			DisplayKey:          helper.CPAAPIKeyMaskedDisplayKey(row),
-			Alias:               row.KeyAlias,
-			LocalRankingEnabled: h.config.APIKeyViewerLocalRankingEnabled,
+			DisplayKey:               helper.CPAAPIKeyMaskedDisplayKey(row),
+			Alias:                    row.KeyAlias,
+			LocalRankingEnabled:      h.config.APIKeyViewerLocalRankingEnabled,
+			ViewerEventsEnabled:      row.ViewerEventsEnabled,
+			ViewerRequestLogsEnabled: row.ViewerRequestLogsEnabled,
 		}
 	}
 	c.JSON(http.StatusOK, response)
