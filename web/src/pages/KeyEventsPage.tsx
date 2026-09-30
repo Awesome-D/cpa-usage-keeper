@@ -33,7 +33,7 @@ export function KeyEventsPage({ apiKey, onNavigate, onAuthRequired }: KeyEventsP
         onAuthRequired?.();
         return;
       }
-      setError(err instanceof Error ? err.message : t('common.error'));
+      setError(err instanceof Error ? err.message : t('usage_stats.credentials_detail_requests_load_failed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -67,11 +67,11 @@ export function KeyEventsPage({ apiKey, onNavigate, onAuthRequired }: KeyEventsP
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', padding: '10px 8px' }}>{t('usage_stats.event_time')}</th>
-                  <th style={{ textAlign: 'left', padding: '10px 8px' }}>{t('usage_stats.model')}</th>
+                  <th style={{ textAlign: 'left', padding: '10px 8px' }}>{t('usage_stats.request_events_timestamp')}</th>
+                  <th style={{ textAlign: 'left', padding: '10px 8px' }}>{t('usage_stats.model_name')}</th>
                   <th style={{ textAlign: 'right', padding: '10px 8px' }}>{t('usage_stats.total_tokens')}</th>
                   <th style={{ textAlign: 'right', padding: '10px 8px' }}>{t('usage_stats.latency')}</th>
-                  <th style={{ textAlign: 'left', padding: '10px 8px' }}>{t('usage_stats.status')}</th>
+                  <th style={{ textAlign: 'left', padding: '10px 8px' }}>{t('usage_stats.result')}</th>
                 </tr>
               </thead>
               <tbody>
